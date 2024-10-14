@@ -2,8 +2,7 @@
 
 # Traffic signs classification with a convolutional network
 
-This is my attempt to tackle traffic signs classification problem with a convolutional neural network implemented in TensorFlow (reaching **99.33% accuracy**). The highlights of this solution would be data preprocessing, data augmentation, pre-training and skipping connections in the network. You can read [the full post here](http://navoshta.com/traffic-signs-classification/).
-
+This is my attempt to tackle traffic signs classification problem with a convolutional neural network implemented in TensorFlow (reaching **99.33% accuracy**). The highlights of this solution would be data preprocessing, data augmentation, pre-training and skipping connections in the network. 
 Classification of German traffic signs is one of the assignments in Udacity Self-Driving Car Nanodegree program, however the dataset is publicly [available here](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).
 
 ## Dataset
