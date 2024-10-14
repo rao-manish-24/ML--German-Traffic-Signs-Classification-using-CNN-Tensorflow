@@ -1,85 +1,56 @@
+This project focuses on solving the traffic sign classification challenge using a CNN implemented in TensorFlow, achieving an impressive 99.33% accuracy. Key aspects of this solution include data preprocessing, augmentation, pre-training, and skip connections in the network architecture. The dataset used is the German Traffic Sign Dataset, which is part of Udacity's Self-Driving Car Nanodegree program, but is also publicly available here.
 
+Dataset
+The German Traffic Sign Dataset consists of 39,209 color images (32×32 pixels) for training and 12,630 images for testing. Each image belongs to one of 43 traffic sign classes. The pixel values range from [0, 255] in the RGB color space, and each class is labeled as an integer between 0 and 42. The dataset is imbalanced, with some classes having far fewer examples than others. Additionally, the images exhibit variability in contrast and brightness, which calls for the application of techniques like histogram equalization to enhance feature extraction.
 
-# Traffic signs classification with a convolutional network
+Preprocessing
+Preprocessing typically involves scaling the pixel values to the [0, 1] range (since they are originally in [0, 255]), one-hot encoding the labels, and shuffling the dataset. Due to the variability in the dataset, localized histogram equalization is also applied to improve feature extraction. The model is designed to work with grayscale images rather than full-color images, as previous research by Pierre Sermanet and Yann LeCun suggests that color channels don't significantly enhance performance. Therefore, the Y channel from the YCbCr color space is used.
 
-This is my attempt to tackle traffic signs classification problem with a convolutional neural network implemented in TensorFlow (reaching **99.33% accuracy**). The highlights of this solution would be data preprocessing, data augmentation, pre-training and skipping connections in the network. 
-Classification of German traffic signs is one of the assignments in Udacity Self-Driving Car Nanodegree program, however the dataset is publicly [available here](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).
+Data Augmentation
+The dataset is relatively small and unbalanced, making it difficult for the model to generalize well. To address this, data augmentation is applied to increase the dataset size and balance the class distribution.
 
-## Dataset
+Flipping
+Some traffic signs are invariant to horizontal or vertical flipping, meaning that flipping an image of these signs will not change their class. For example, signs like Priority Road and No Entry can be flipped without changing their meaning, while others require 180-degree rotation (achieved by flipping both horizontally and vertically). This method increases the training examples from 39,209 to 63,538 at no additional data collection cost.
 
-The [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset) consists of **39,209 32×32 px color images** that we are supposed to use for training, and **12,630 images** that we will use for testing. Each image is a photo of a traffic sign belonging to one of 43 classes, e.g. traffic sign types.
+Rotation and Projection
+Further augmentation is done using random rotations and projections. Other transformations, such as blur, noise, and gamma adjustments, were tested, but rotation and projection gave the best results. Projection also handles random shearing and scaling by altering the image corners within a specified range.
 
-Each image is a 32×32×3 array of pixel intensities, represented as `[0, 255]` integer values in RGB color space. Class of each image is encoded as an integer in a 0 to 42 range. Dataset is very unbalanced, and some classes are represented way better than the others. The images also differ significantly in terms of contrast and brightness, so we will need to apply some kind of histogram equalization, this should noticeably improve feature extraction.
+Model Architecture
+The model is a deep neural network based on a CNN architecture inspired by Daniel Nouri's tutorial and the Sermanet/LeCun paper. The model consists of 3 convolutional layers for feature extraction and 1 fully connected layer for classification.
 
-## Preprocessing
+<p align="center"> <img src="model_architecture.png" alt="Model architecture"/> </p>
+Instead of following a strict feed-forward architecture, this network employs multi-scale features. This means that the output from the convolutional layers is not only passed to the next layer but also fed directly into the fully connected layer, after additional max-pooling, ensuring that all convolutions are appropriately subsampled before classification.
 
-The usual preprocessing in this case would include scaling of pixel values to `[0, 1]` (as currently they are in `[0, 255]` range), representing labels in a one-hot encoding and shuffling. Looking at the images, histogram equalization may be helpful as well. We will apply _localized_ histogram equalization, as it seems to improve feature extraction even further in our case. 
+Regularization
+Several regularization techniques were used to minimize overfitting:
 
-I will only use a single channel in my model, e.g. grayscale images instead of color ones. As Pierre Sermanet and Yann LeCun mentioned in [their paper](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf), using color channels didn't seem to improve things a lot, so I will only take `Y` channel of the `YCbCr` representation of an image.
-
-## Augmentation
-
-The amount of data we have is not sufficient for a model to generalise well. It is also fairly unbalanced, and some classes are represented to significantly lower extent than the others. But we will fix this with data augmentation!
-
-### Flipping
-
-First, we are going to apply a couple of tricks to extend our data by _flipping_. You might have noticed that some traffic signs are invariant to horizontal and/or vertical flipping, which basically means that we can flip an image and it should still be classified as belonging to the same class. Some signs can be flipped either way — like **Priority Road** or **No Entry** signs, other signs are *180° rotation invariant*, and to rotate them 180° we will simply first flip them horizontally, and then vertically. Finally there are signs that can be flipped, and should then be classified as a sign of some other class. This is still useful, as we can use data of these classes to extend their counterparts. We are going to use this during augmentation, and this simple trick lets us extend original **39,209** training examples to **63,538**, nice! And it cost us nothing in terms of data collection or computational resources. 
-
-### Rotation and projection
-
-However, it is still not enough, and we need to augment even further. After experimenting with adding random *rotation*, *projection*, *blur*, *noize* and *gamma adjusting*, I have used *rotation* and *projection* transformations in the pipeline. Projection transform seems to also take care of random shearing and scaling as we randomly position image corners in a `[±delta, ±delta]` range.
-
-## Model 
-
-### Architecture
-
-I decided to use a deep neural network classifier as a model, which was inspired by [Daniel Nouri's tutorial](http://navoshta.com/facial-with-tensorflow/) and aforementioned [Pierre Sermanet / Yann LeCun paper](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf). It is fairly simple and has 4 layers: **3 convolutional layers** for feature extraction and **one fully connected layer** as a classifier.
-
-<p align="center">
-  <img src="model_architecture.png" alt="Model architecture"/>
-</p>
-
-As opposed to usual strict feed-forward CNNs I use **multi-scale features**, which means that convolutional layers' output is not only forwarded into subsequent layer, but is also branched off and fed into classifier (e.g. fully connected layer). Please mind that these branched off layers undergo additional max-pooling, so that all convolutions are proportionally subsampled before going into classifier.
-
-### Regularization
-
-I use the following regularization techniques to minimize overfitting to training data:
-
-* **Dropout**. Dropout is amazing and will drastically improve generalization of your model. Normally you may only want to apply dropout to fully connected layers, as shared weights in convolutional layers are good regularizers themselves. However, I did notice a slight improvement in performance when using a bit of dropout on convolutional layers, thus left it in, but kept it at minimum:
-
-```
+Dropout: Applied to both convolutional and fully connected layers to improve generalization. Though convolutional layers are naturally good regularizers, small amounts of dropout were found to slightly improve performance.
+graphql
+Copy code
                 Type           Size         keep_p      Dropout
  Layer 1        5x5 Conv       32           0.9         10% of neurons  
  Layer 2        5x5 Conv       64           0.8         20% of neurons
  Layer 3        5x5 Conv       128          0.7         30% of neurons
  Layer 4        FC             1024         0.5         50% of neurons
-```
+L2 Regularization: Applied with a lambda value of 0.0001, L2 regularization is used for the weights in the fully connected layers to reduce overfitting without affecting the bias terms.
 
-* **L2 Regularization**. I ended up using **lambda = 0.0001** which seemed to perform best. Important point here is that L2 loss should only include weights of the fully connected layers, and normally it doesn't include bias term. Intuition behind it being that bias term is not contributing to overfitting, as it is not adding any new degree of freedom to a model. 
+Early Stopping: Early stopping is implemented with a patience of 100 epochs. The model is trained until the validation loss no longer improves, at which point the best-performing weights are retained.
 
-* **Early stopping**. I use early stopping with a patience of **100 epochs** to capture the last best-performing weights and roll back when model starts overfitting training data. I use validation set cross entropy loss as an early stopping metric, intuition behind using it instead of accuracy is that if your model is *confident* about its predictions it should generalize better.
+Training
+Two datasets were used for training:
 
-## Training
+Extended Dataset: Augmented to contain 20 times the data of the original dataset, with each image generating 19 additional versions through jittering, resulting in improved model performance.
 
-I have generated two datasets for training my model using augmentation pipeline I mentioned earlier:
+Balanced Dataset: Adjusted to include 20,000 examples per class, balancing the dataset. Each class is augmented with jittered images to reach 20,000 samples.
 
-* **Extended** dataset. This dataset simply contains **20x more data** than the original one — e.g. for each training example we generate 19 additional examples by jittering original image, with **augmentation intensity = 0.75**. 
-* **Balanced** dataset. This dataset is balanced across classes and has **20.000 examples** for each class. These 20k contain original training dataset, as well as jittered images from the original training set (with **augmentation intensity = 0.75**) to complete number of examples for each class to 20.000 images.
+Training Stages
+Stage 1: Pre-training. The model is pre-trained using the extended dataset with a learning rate of 0.001. This stage typically converges after about 180 epochs (~3.5 hours on an Nvidia GTX1080 GPU).
 
-**Disclaimer:** Training on **extended** dataset may not be the best idea, as some classes remain significantly less represented than the others there. Training a model with this dataset would make it biased towards predicting overrepresented classes. However, in our case we are trying to score highest accuracy on supplied test dataset, which (probably) follows the same classes distribution. So we are going to _cheat_ a bit and use this extended dataset for pre-training — this has proven to make test set accuracy higher (although hardly makes a model perform better "in the field"!).
+Stage 2: Fine-tuning. The model is fine-tuned on the balanced dataset with a reduced learning rate of 0.0001. Fine-tuning further boosts test set accuracy.
 
-I then use 25% of these augmented datasets for validation while training in 2 stages:
+This two-stage training process can easily achieve over 99% accuracy on the test set.
 
-* **Stage 1: Pre-training**. On the first stage I pre-train the model using **extended** training dataset with TensorFlow `AdamOptimizer` and learning rate set to **0.001**. It normally stops improving after ~180 epochs, which takes ~3.5 hours on my machine equipped with Nvidia GTX1080 GPU.
-* **Stage 2: Fine-tuning**. I then train the model using a **balanced** dataset with a decreased learning rate of **0.0001**.
+Results
+After multiple rounds of fine-tuning, the model achieved 99.33% accuracy on the test set. Given that the test set contains 12,630 images, this means the model misclassified 85 images. Most errors involved images with artifacts, such as shadows or obstructions, or classes underrepresented in the training data. Improving color information or training solely on balanced datasets could mitigate these issues.
 
-These two training stages could easily get you past 99% accuracy on the test set. You can, however, improve model performance even further by re-generating **balanced** dataset with slightly decreased augmentation intensity and repeating 2nd fine-tuning stage a couple of times.
-
-## Results
-
-After a couple of fine-tuning training iterations this model scored **99.33% accuracy on the test set**, which is not too bad. As there was a total of 12,630 images that we used for testing, apparently there are **85 examples** that the model could not classify correctly.
-
-Signs on most of those images either have artefacts like shadows or obstructing objects. There are, however, a couple of signs that were simply underrepresented in the training set — training solely on balanced datasets could potentially eliminate this issue, and using some sort of color information could definitely help as well.
-
-In conclusion, according to different sources human performance on a similar task varies from 98.3% to 98.8%, therefore this model seems to outperform an average human. Which, I believe, is the ultimate goal of machine learning!
-
+Human performance on similar tasks ranges between 98.3% and 98.8%, meaning this model exceeds average human accuracy, demonstrating the effectiveness of machine learning in this domain.
